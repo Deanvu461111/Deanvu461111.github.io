@@ -1096,6 +1096,17 @@ table.tbl {
   .info-btn { display: none !important; }
   .info-box { display: block !important; }
 }
+
+/* ========== 12. DANH SÁCH CÁCH BẤM TAY ========== */
+.bam-list {
+  margin: 6px 0 0;
+  padding-left: 20px;
+}
+
+.bam-list li {
+  margin-bottom: 6px;
+  line-height: 1.6;
+}
 </style>
 </head>
 <body>
@@ -1103,7 +1114,7 @@ table.tbl {
   <header class="site-header">
     <h1>PHẦN MỀM XEM TUỔI</h1>
     <div class="sub sub-bq">Bản quyền chùa Lý Nhân &mdash; Tam Điệp, Ninh Bình</div>
-    <div class="sub">Kim Lâu &middot; Hoang Ốc &middot; Tam Tai &middot; Thái Tuế &middot; Sao chiếu &nbsp;|&nbsp; Năm 2027 &ndash; 2040</div>
+    <div class="sub">Kim Lâu &middot; Hoang Ốc &middot; Tam Tai &middot; Thái Tuế &middot; Sao chiếu &middot; Trùng tang &middot; Quan sát trẻ nhỏ</div>
   </header>
   <main id="app"></main>
   <footer class="footer">
@@ -1290,6 +1301,338 @@ table.tbl {
     saoChieu: saoChieu, SAO_XAU: SAO_XAU, SAO_YNGHIA: SAO_YNGHIA,
     tra: tra
   };
+})(typeof window !== 'undefined' ? window : globalThis);
+</script>
+<script>/* ============================================================
+   ĐỔI LỊCH DƯƠNG SANG ÂM + CAN CHI NGÀY, THÁNG, GIỜ
+   Thuật toán âm lịch Việt Nam của Hồ Ngọc Đức (múi giờ +7)
+   ============================================================ */
+(function (root) {
+  'use strict';
+  var PI = Math.PI;
+  var CAN = ['Giáp','Ất','Bính','Đinh','Mậu','Kỷ','Canh','Tân','Nhâm','Quý'];
+  var CHI = ['Tý','Sửu','Dần','Mão','Thìn','Tỵ','Ngọ','Mùi','Thân','Dậu','Tuất','Hợi'];
+
+  function INT(d) { return Math.floor(d); }
+
+  function jdFromDate(dd, mm, yy) {
+    var a = INT((14 - mm) / 12), y = yy + 4800 - a, m = mm + 12 * a - 3;
+    var jd = dd + INT((153 * m + 2) / 5) + 365 * y + INT(y / 4) - INT(y / 100) + INT(y / 400) - 32045;
+    if (jd < 2299161) jd = dd + INT((153 * m + 2) / 5) + 365 * y + INT(y / 4) - 32083;
+    return jd;
+  }
+  function jdToDate(jd) {
+    var a, b, c, d, e, m, day, month, year;
+    if (jd > 2299160) { a = jd + 32044; b = INT((4 * a + 3) / 146097); c = a - INT((b * 146097) / 4); }
+    else { b = 0; c = jd + 32082; }
+    d = INT((4 * c + 3) / 1461); e = c - INT((1461 * d) / 4); m = INT((5 * e + 2) / 153);
+    day = e - INT((153 * m + 2) / 5) + 1; month = m + 3 - 12 * INT(m / 10); year = b * 100 + d - 4800 + INT(m / 10);
+    return [day, month, year];
+  }
+  function newMoon(k) {
+    var T = k / 1236.85, T2 = T * T, T3 = T2 * T, dr = PI / 180;
+    var Jd1 = 2415020.75933 + 29.53058868 * k + 0.0001178 * T2 - 0.000000155 * T3;
+    Jd1 = Jd1 + 0.00033 * Math.sin((166.56 + 132.87 * T - 0.009173 * T2) * dr);
+    var M = 359.2242 + 29.10535608 * k - 0.0000333 * T2 - 0.00000347 * T3;
+    var Mpr = 306.0253 + 385.81691806 * k + 0.0107306 * T2 + 0.00001236 * T3;
+    var F = 21.2964 + 390.67050646 * k - 0.0016528 * T2 - 0.00000239 * T3;
+    var C1 = (0.1734 - 0.000393 * T) * Math.sin(M * dr) + 0.0021 * Math.sin(2 * dr * M);
+    C1 = C1 - 0.4068 * Math.sin(Mpr * dr) + 0.0161 * Math.sin(dr * 2 * Mpr);
+    C1 = C1 - 0.0004 * Math.sin(dr * 3 * Mpr);
+    C1 = C1 + 0.0104 * Math.sin(dr * 2 * F) - 0.0051 * Math.sin(dr * (M + Mpr));
+    C1 = C1 - 0.0074 * Math.sin(dr * (M - Mpr)) + 0.0004 * Math.sin(dr * (2 * F + M));
+    C1 = C1 - 0.0004 * Math.sin(dr * (2 * F - M)) - 0.0006 * Math.sin(dr * (2 * F + Mpr));
+    C1 = C1 + 0.0010 * Math.sin(dr * (2 * F - Mpr)) + 0.0005 * Math.sin(dr * (2 * Mpr + M));
+    var deltat;
+    if (T < -11) deltat = 0.001 + 0.000839 * T + 0.0002261 * T2 - 0.00000845 * T3 - 0.000000081 * T * T3;
+    else deltat = -0.000278 + 0.000265 * T + 0.000262 * T2;
+    return Jd1 + C1 - deltat;
+  }
+  function sunLongitude(jdn) {
+    var T = (jdn - 2451545.0) / 36525, T2 = T * T, dr = PI / 180;
+    var M = 357.52910 + 35999.05030 * T - 0.0001559 * T2 - 0.00000048 * T * T2;
+    var L0 = 280.46645 + 36000.76983 * T + 0.0003032 * T2;
+    var DL = (1.914600 - 0.004817 * T - 0.000014 * T2) * Math.sin(dr * M);
+    DL = DL + (0.019993 - 0.000101 * T) * Math.sin(dr * 2 * M) + 0.000290 * Math.sin(dr * 3 * M);
+    var L = L0 + DL; L = L * dr; L = L - PI * 2 * INT(L / (PI * 2));
+    return L;
+  }
+  function getSunLongitude(dayNumber, tz) { return INT(sunLongitude(dayNumber - 0.5 - tz / 24.0) / PI * 6); }
+  function getNewMoonDay(k, tz) { return INT(newMoon(k) + 0.5 + tz / 24.0); }
+  function getLunarMonth11(yy, tz) {
+    var off = jdFromDate(31, 12, yy) - 2415021;
+    var k = INT(off / 29.530588853);
+    var nm = getNewMoonDay(k, tz);
+    var sunLong = getSunLongitude(nm, tz);
+    if (sunLong >= 9) nm = getNewMoonDay(k - 1, tz);
+    return nm;
+  }
+  function getLeapMonthOffset(a11, tz) {
+    var k = INT((a11 - 2415021.076998695) / 29.530588853 + 0.5);
+    var last, i = 1, arc = getSunLongitude(getNewMoonDay(k + 1, tz), tz);
+    do { last = arc; i++; arc = getSunLongitude(getNewMoonDay(k + i, tz), tz); }
+    while (arc != last && i < 14);
+    return i - 1;
+  }
+  /* Trả về {ngay, thang, nam, nhuan} */
+  function duongSangAm(dd, mm, yy, tz) {
+    tz = (tz === undefined) ? 7 : tz;
+    var k, dayNumber, monthStart, a11, b11, lunarDay, lunarMonth, lunarYear, lunarLeap, diff;
+    dayNumber = jdFromDate(dd, mm, yy);
+    k = INT((dayNumber - 2415021.076998695) / 29.530588853);
+    monthStart = getNewMoonDay(k + 1, tz);
+    if (monthStart > dayNumber) monthStart = getNewMoonDay(k, tz);
+    a11 = getLunarMonth11(yy, tz); b11 = a11;
+    if (a11 >= monthStart) { lunarYear = yy; a11 = getLunarMonth11(yy - 1, tz); }
+    else { lunarYear = yy + 1; b11 = getLunarMonth11(yy + 1, tz); }
+    lunarDay = dayNumber - monthStart + 1;
+    diff = INT((monthStart - a11) / 29);
+    lunarLeap = 0; lunarMonth = diff + 11;
+    if (b11 - a11 > 365) {
+      var leapMonthDiff = getLeapMonthOffset(a11, tz);
+      if (diff >= leapMonthDiff) {
+        lunarMonth = diff + 10;
+        if (diff == leapMonthDiff) lunarLeap = 1;
+      }
+    }
+    if (lunarMonth > 12) lunarMonth = lunarMonth - 12;
+    if (lunarMonth >= 11 && diff < 4) lunarYear -= 1;
+    return { ngay: lunarDay, thang: lunarMonth, nam: lunarYear, nhuan: lunarLeap, jd: dayNumber };
+  }
+
+  /* Can chi NGÀY theo số ngày Julius */
+  function canChiNgay(jd) {
+    return { can: CAN[(jd + 9) % 10], chi: CHI[(jd + 1) % 12],
+             ten: CAN[(jd + 9) % 10] + ' ' + CHI[(jd + 1) % 12] };
+  }
+  /* Can chi THÁNG âm */
+  function canChiThang(lunarMonth, lunarYear) {
+    var can = CAN[(lunarYear * 12 + lunarMonth + 3) % 10];
+    var chi = CHI[(lunarMonth + 1) % 12];
+    return { can: can, chi: chi, ten: can + ' ' + chi };
+  }
+  /* Can chi NĂM âm */
+  function canChiNam(lunarYear) {
+    return { can: CAN[(lunarYear + 6) % 10], chi: CHI[(lunarYear + 8) % 12],
+             ten: CAN[(lunarYear + 6) % 10] + ' ' + CHI[(lunarYear + 8) % 12] };
+  }
+  /* Giờ đồng hồ -> chi giờ. 23h-1h Tý, 1-3 Sửu ... */
+  function chiGio(gio) { return CHI[Math.floor(((gio + 1) % 24) / 2)]; }
+  function chiGioIndex(gio) { return Math.floor(((gio + 1) % 24) / 2); }
+  /* Can giờ Tý của ngày, theo can ngày (Giáp Kỷ -> Giáp Tý) */
+  function canChiGio(jd, gio) {
+    var canNgayIdx = (jd + 9) % 10;
+    var chiIdx = chiGioIndex(gio);
+    var canIdx = ((canNgayIdx % 5) * 2 + chiIdx) % 10;
+    return { can: CAN[canIdx], chi: CHI[chiIdx], ten: CAN[canIdx] + ' ' + CHI[chiIdx], chiIndex: chiIdx };
+  }
+
+  root.AmLich = {
+    CAN: CAN, CHI: CHI, jdFromDate: jdFromDate, jdToDate: jdToDate,
+    duongSangAm: duongSangAm, canChiNgay: canChiNgay, canChiThang: canChiThang,
+    canChiNam: canChiNam, chiGio: chiGio, chiGioIndex: chiGioIndex, canChiGio: canChiGio
+  };
+})(typeof window !== 'undefined' ? window : globalThis);
+</script>
+<script>/* ============================================================
+   TRÙNG TANG - NHẬP MỘ - THIÊN DI
+   Quy tắc đối chiếu từ 10 nguồn dân gian, thống nhất:
+   - Nam khởi cung Dần, đếm thuận; Nữ khởi cung Thân, đếm nghịch
+   - Tuổi: 10 tuổi tại cung khởi, mỗi chục tiến 1 cung, rồi tuổi lẻ mỗi tuổi 1 cung
+   - Tháng, ngày, giờ: đếm tiếp từ cung KẾ TIẾP cung vừa tìm được
+   - Dần/Thân/Tỵ/Hợi = Trùng tang; Tý/Ngọ/Mão/Dậu = Thiên di;
+     Thìn/Tuất/Sửu/Mùi = Nhập mộ
+   ============================================================ */
+(function (root) {
+  'use strict';
+  var CHI = ['Tý','Sửu','Dần','Mão','Thìn','Tỵ','Ngọ','Mùi','Thân','Dậu','Tuất','Hợi'];
+  var I = {}; CHI.forEach(function (c, i) { I[c] = i; });
+
+  var TRUNG_TANG = ['Dần','Thân','Tỵ','Hợi'];
+  var THIEN_DI   = ['Tý','Ngọ','Mão','Dậu'];
+  var NHAP_MO    = ['Thìn','Tuất','Sửu','Mùi'];
+
+  function loaiCung(chi) {
+    if (NHAP_MO.indexOf(chi) >= 0) return 'Nhập mộ';
+    if (THIEN_DI.indexOf(chi) >= 0) return 'Thiên di';
+    return 'Trùng tang';
+  }
+  function buoc(tuIndex, soBuoc, thuan) {
+    var n = thuan ? (tuIndex + soBuoc) : (tuIndex - soBuoc);
+    return ((n % 12) + 12) % 12;
+  }
+
+  /* tuoi: tuổi mụ; thangAm 1-12; ngayAm 1-30; gioChiIndex 0..11 (0 = Tý) */
+  function tinh(laNam, tuoi, thangAm, ngayAm, gioChiIndex) {
+    var thuan = !!laNam;
+    var khoi = thuan ? I['Dần'] : I['Thân'];
+
+    /* Dưới 10 tuổi: các nguồn thống nhất là không tính trùng tang */
+    if (tuoi < 10) {
+      return { khongTinh: true,
+        ketLuan: 'Theo lệ dân gian, người mất dưới 10 tuổi không tính trùng tang.',
+        mucDo: 'yen', mucs: [] };
+    }
+    /* --- Cung tuổi: 10 tuổi tại cung khởi --- */
+    var chuc = Math.floor(tuoi / 10), le = tuoi % 10;
+    var soBuocTuoi = (chuc - 1) + le;
+    var cTuoi  = buoc(khoi, soBuocTuoi, thuan);
+    /* --- Tháng, ngày, giờ: bắt đầu từ cung kế tiếp --- */
+    var cThang = buoc(cTuoi,  thangAm, thuan);
+    var cNgay  = buoc(cThang, ngayAm,  thuan);
+    var cGio   = buoc(cNgay,  gioChiIndex + 1, thuan);
+
+    var mucs = [
+      { ten: 'Tuổi',  chi: CHI[cTuoi],  loai: loaiCung(CHI[cTuoi]) },
+      { ten: 'Tháng', chi: CHI[cThang], loai: loaiCung(CHI[cThang]) },
+      { ten: 'Ngày',  chi: CHI[cNgay],  loai: loaiCung(CHI[cNgay]) },
+      { ten: 'Giờ',   chi: CHI[cGio],   loai: loaiCung(CHI[cGio]) }
+    ];
+    var soNhapMo  = mucs.filter(function (m) { return m.loai === 'Nhập mộ'; }).length;
+    var soThienDi = mucs.filter(function (m) { return m.loai === 'Thiên di'; }).length;
+    var soTrung   = mucs.filter(function (m) { return m.loai === 'Trùng tang'; }).length;
+
+    /* Luận: 1 Nhập mộ xoá 3 Trùng tang; 2 Thiên di xoá 1 Trùng tang */
+    var conLai = soTrung - soNhapMo * 3 - Math.floor(soThienDi / 2);
+    if (conLai < 0) conLai = 0;
+    var ketLuan, mucDo;
+    if (soNhapMo > 0) {
+      ketLuan = 'Được Nhập mộ, coi như yên lành. Theo lệ dân gian, một Nhập mộ xoá được ba Trùng tang, không phải làm lễ trấn trùng tang.';
+      mucDo = 'yen';
+    } else if (conLai <= 0) {
+      ketLuan = 'Không có Nhập mộ nhưng được ' + soThienDi + ' Thiên di, theo lệ "nhị Thiên di sát nhất Trùng" thì đã hoá giải hết phần Trùng tang.';
+      mucDo = 'yen';
+    } else {
+      ketLuan = 'Không có Nhập mộ nào, còn ' + conLai + ' cung Trùng tang chưa hoá giải. Theo lệ dân gian nên nhờ nhà chùa hoặc người có kinh nghiệm làm lễ trấn trùng tang.';
+      mucDo = 'nang';
+    }
+    var cachBam = [
+      (laNam ? 'Nam khởi cung Dần, bấm thuận' : 'Nữ khởi cung Thân, bấm nghịch') +
+        '. Tuổi mụ ' + tuoi + ': ' + (chuc * 10) + ' tuổi tại cung ' +
+        CHI[buoc(khoi, chuc - 1, thuan)] + (le ? ', thêm ' + le + ' tuổi lẻ' : '') +
+        ' → cung tuổi ' + CHI[cTuoi] + '.',
+      'Từ cung ' + CHI[cTuoi] + ', bấm tháng 1 ở cung kế tiếp, đến tháng ' + thangAm +
+        ' → cung tháng ' + CHI[cThang] + '.',
+      'Từ cung ' + CHI[cThang] + ', bấm ngày 1 ở cung kế tiếp, đến ngày ' + ngayAm +
+        ' → cung ngày ' + CHI[cNgay] + '.',
+      'Từ cung ' + CHI[cNgay] + ', bấm giờ Tý ở cung kế tiếp, đến giờ ' + CHI[gioChiIndex] +
+        ' → cung giờ ' + CHI[cGio] + '.'
+    ];
+    return {
+      khongTinh: false, cachBam: cachBam,
+      mucs: mucs, soNhapMo: soNhapMo, soThienDi: soThienDi, soTrungTang: soTrung,
+      conLai: conLai, ketLuan: ketLuan, mucDo: mucDo,
+      cungKhoi: CHI[khoi], chieu: thuan ? 'thuận' : 'nghịch'
+    };
+  }
+
+  root.TrungTang = { tinh: tinh, loaiCung: loaiCung, CHI: CHI,
+                     TRUNG_TANG: TRUNG_TANG, THIEN_DI: THIEN_DI, NHAP_MO: NHAP_MO };
+})(typeof window !== 'undefined' ? window : globalThis);
+</script>
+<script>/* ============================================================
+   QUAN SÁT TRẺ EM
+   Kim Xà Thiết Tỏa, Quan Sát, Diêm Vương, Dạ Đề, Tướng Quân
+   Bảng đối chiếu từ các nguồn dân gian; chỗ có dị bản đều nêu cả hai.
+   ============================================================ */
+(function (root) {
+  'use strict';
+  var CHI = ['Tý','Sửu','Dần','Mão','Thìn','Tỵ','Ngọ','Mùi','Thân','Dậu','Tuất','Hợi'];
+  function idx(c) { return CHI.indexOf(c); }
+  function m12(n) { return ((n % 12) + 12) % 12; }
+
+  /* ---------- QUAN SÁT: hai dị bản ---------- */
+  var QUAN_SAT_A = ['Tỵ','Ngọ','Mùi','Thân','Dậu','Tuất','Hợi','Tý','Sửu','Dần','Mão','Thìn'];
+  var QUAN_SAT_B = ['Tỵ','Thìn','Mão','Dần','Sửu','Tý','Hợi','Tuất','Dậu','Thân','Mùi','Ngọ'];
+
+  /* ---------- Theo mùa ---------- */
+  function mua(thangAm) {
+    if (thangAm <= 3) return 'Xuân';
+    if (thangAm <= 6) return 'Hạ';
+    if (thangAm <= 9) return 'Thu';
+    return 'Đông';
+  }
+  var DIEM_VUONG = { 'Xuân': ['Sửu','Mùi'], 'Hạ': ['Thìn','Tuất'], 'Thu': ['Tý','Ngọ'], 'Đông': ['Mão','Dậu'] };
+  var DA_DE      = { 'Xuân': ['Ngọ'], 'Hạ': ['Dậu'], 'Thu': ['Tý'], 'Đông': ['Mão'] };
+  var TUONG_QUAN = { 'Xuân': ['Thìn','Tuất','Dậu'], 'Hạ': ['Tý','Mão','Mùi'],
+                     'Thu': ['Dần','Ngọ','Sửu'], 'Đông': ['Thân','Tỵ','Hợi'] };
+
+  /* ---------- KIM XÀ THIẾT TỎA ---------- */
+  function kimXa(chiNam, thangAm, ngayAm, gioChi, laNam) {
+    var cThang1 = m12(10 + idx(chiNam));          /* năm Tý đặt ở cung Tuất, đếm thuận */
+    var cMung1  = m12(cThang1 - (thangAm - 1));   /* đếm nghịch tới tháng sinh */
+    var cGioTy  = m12(cMung1 + (ngayAm - 1));     /* đếm thuận tới ngày sinh */
+    var cKq     = m12(cGioTy - idx(gioChi));      /* đếm nghịch tới giờ sinh */
+    var k = CHI[cKq];
+    var phamNam = (k === 'Thìn' || k === 'Tuất');
+    var phamNu  = (k === 'Sửu'  || k === 'Mùi');
+    var pham, bang;
+    if (laNam) { pham = phamNam; bang = phamNu; }
+    else       { pham = phamNu;  bang = phamNam; }
+    return {
+      cungKetQua: k, pham: pham, bangGio: bang && !pham,
+      cachBam: [
+        'Năm ' + chiNam + ': đặt năm Tý ở cung Tuất bấm thuận → cung tháng Giêng là ' + CHI[cThang1] + '.',
+        'Từ ' + CHI[cThang1] + ' bấm nghịch đến tháng ' + thangAm + ' → cung mồng 1 là ' + CHI[cMung1] + '.',
+        'Từ ' + CHI[cMung1] + ' bấm thuận đến ngày ' + ngayAm + ' → cung giờ Tý là ' + CHI[cGioTy] + '.',
+        'Từ ' + CHI[cGioTy] + ' bấm nghịch đến giờ ' + gioChi + ' → cung kết quả là ' + k + '.'
+      ]
+    };
+  }
+
+  /* ---------- TỔNG HỢP ---------- */
+  function tra(chiNam, thangAm, ngayAm, gioChi, laNam) {
+    var mu = mua(thangAm);
+    var kx = kimXa(chiNam, thangAm, ngayAm, gioChi, laNam);
+    var qsA = QUAN_SAT_A[thangAm - 1], qsB = QUAN_SAT_B[thangAm - 1];
+    var ds = [];
+
+    ds.push({
+      ten: 'Kim Xà Thiết Tỏa',
+      pham: kx.pham, canLuuY: kx.bangGio,
+      ketQua: kx.pham ? 'PHẠM' : (kx.bangGio ? 'Bàng giờ (phạm nhẹ)' : 'Không phạm'),
+      chiTiet: 'Cung kết quả: ' + kx.cungKetQua + '. ' +
+        (laNam ? 'Bé trai phạm khi vào cung Thìn hoặc Tuất; vào Sửu, Mùi là bàng giờ.'
+               : 'Bé gái phạm khi vào cung Sửu hoặc Mùi; vào Thìn, Tuất là bàng giờ.'),
+      yNghia: 'Dân gian cho là quan nặng nhất, trẻ khó nuôi, hay đau ốm, cần giữ gìn kỹ những năm đầu đời. Cách giải quen thuộc là bán khoán vào chùa.',
+      cachBam: kx.cachBam
+    });
+
+    var phamA = (gioChi === qsA), phamB = (gioChi === qsB);
+    ds.push({
+      ten: 'Quan Sát',
+      pham: phamA || phamB, canLuuY: (phamA !== phamB),
+      ketQua: (phamA && phamB) ? 'PHẠM (cả hai bản đều phạm)'
+            : (phamA ? 'PHẠM theo bản A, không phạm theo bản B'
+            : (phamB ? 'PHẠM theo bản B, không phạm theo bản A' : 'Không phạm')),
+      chiTiet: 'Tháng ' + thangAm + ': bản A ứng giờ ' + qsA + ', bản B ứng giờ ' + qsB +
+               '. Trẻ sinh giờ ' + gioChi + '.',
+      yNghia: 'Dân gian cho là trẻ hay ốm vặt, khó bảo. Hai bản tra khác nhau, nguồn chưa thống nhất bản nào đúng, nên phần mềm hiện cả hai để nhà chùa tự chọn.',
+      cachBam: []
+    });
+
+    [['Diêm Vương', DIEM_VUONG, 'Dân gian cho là trẻ hay giật mình, co giật chân tay, thần kinh không yên.'],
+     ['Dạ Đề', DA_DE, 'Dân gian cho là trẻ hay khóc đêm, khó ngủ.'],
+     ['Tướng Quân', TUONG_QUAN, 'Dân gian cho là trẻ hay đau ốm vặt, lớn lên nghịch ngợm. Mức nhẹ.']
+    ].forEach(function (x) {
+      var gio = x[1][mu];
+      ds.push({
+        ten: x[0], pham: gio.indexOf(gioChi) >= 0, canLuuY: false,
+        ketQua: gio.indexOf(gioChi) >= 0 ? 'PHẠM' : 'Không phạm',
+        chiTiet: 'Sinh tháng ' + thangAm + ' thuộc mùa ' + mu + ', mùa này phạm các giờ: ' +
+                 gio.join(', ') + '. Trẻ sinh giờ ' + gioChi + '.',
+        yNghia: x[2], cachBam: []
+      });
+    });
+
+    var soPham = ds.filter(function (q) { return q.pham; }).length;
+    return { mua: mu, danhSach: ds, soPham: soPham,
+             tenPham: ds.filter(function (q) { return q.pham; }).map(function (q) { return q.ten; }) };
+  }
+
+  root.QuanSat = { tra: tra, kimXa: kimXa, mua: mua, CHI: CHI,
+                   QUAN_SAT_A: QUAN_SAT_A, QUAN_SAT_B: QUAN_SAT_B,
+                   DIEM_VUONG: DIEM_VUONG, DA_DE: DA_DE, TUONG_QUAN: TUONG_QUAN };
 })(typeof window !== 'undefined' ? window : globalThis);
 </script>
 <script>/* Phần mềm xem tuổi - Bản quyền chùa Lý Nhân - giao diện (dùng lõi window.XemTuoi) */
@@ -1745,6 +2088,287 @@ table.tbl {
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();
+})();
+</script>
+<script>/* ============================================================
+   MỤC 4: TRÙNG TANG   |   MỤC 5: QUAN SÁT TRẺ EM
+   Chạy sau app.js, tự dựng lại thanh tab chính cho đủ 5 mục.
+   ============================================================ */
+(function () {
+  'use strict';
+  function el(tag, props, kids) {
+    var e = document.createElement(tag);
+    if (props) Object.keys(props).forEach(function (k) {
+      if (k === 'text') e.textContent = props[k];
+      else if (k === 'className') e.className = props[k];
+      else e.setAttribute(k, props[k]);
+    });
+    if (kids) (Array.isArray(kids) ? kids : [kids]).forEach(function (c) { if (c) e.appendChild(c); });
+    return e;
+  }
+  function clear(n) { while (n.firstChild) n.removeChild(n.firstChild); }
+
+  var CHI = ['Tý','Sửu','Dần','Mão','Thìn','Tỵ','Ngọ','Mùi','Thân','Dậu','Tuất','Hợi'];
+  var KHUNG_GIO = ['23h-1h','1h-3h','3h-5h','5h-7h','7h-9h','9h-11h','11h-13h',
+                   '13h-15h','15h-17h','17h-19h','19h-21h','21h-23h'];
+
+  function selectGio(id, nhan) {
+    var s = el('select', { id: id, 'aria-label': nhan });
+    CHI.forEach(function (c, i) {
+      s.appendChild(el('option', { value: String(i), text: 'Giờ ' + c + ' (' + KHUNG_GIO[i] + ')' }));
+    });
+    return s;
+  }
+  function oSo(id, nhan, min, max, gy) {
+    return el('input', { id: id, type: 'number', min: String(min), max: String(max),
+                         step: '1', placeholder: gy, 'aria-label': nhan, inputmode: 'numeric' });
+  }
+  function truong(nhan, ctl) {
+    return el('div', { className: 'field' },
+      [el('label', { 'for': ctl.id, text: nhan }), ctl]);
+  }
+  function nhomRadio(ten, id1, id2, nhan1, nhan2) {
+    var r1 = el('input', { type: 'radio', name: ten, id: id1, value: '1', checked: 'checked' });
+    var r2 = el('input', { type: 'radio', name: ten, id: id2, value: '0' });
+    return { el: el('div', { className: 'gt-group' }, [
+        el('label', { 'for': id1 }, [r1, el('span', { text: ' ' + nhan1 })]),
+        el('label', { 'for': id2 }, [r2, el('span', { text: ' ' + nhan2 })])
+      ]), r1: r1, r2: r2 };
+  }
+  function khoiBam(tieuDe, cacBuoc) {
+    if (!cacBuoc || !cacBuoc.length) return null;
+    var box = el('div', { className: 'info-box' },
+      [el('div', { className: 'info-title', text: tieuDe })]);
+    var ol = el('ol', { className: 'bam-list' });
+    cacBuoc.forEach(function (b) { ol.appendChild(el('li', { text: b })); });
+    box.appendChild(ol);
+    var nut = el('button', { className: 'info-btn', type: 'button', text: '!', title: 'Xem cách bấm tay' });
+    nut.addEventListener('click', function () {
+      var mo = box.className.indexOf('open') >= 0;
+      box.className = mo ? 'info-box' : 'info-box open';
+      nut.className = mo ? 'info-btn' : 'info-btn on';
+    });
+    return { nut: nut, box: box };
+  }
+  /* Đổi ngày nhập vào thành ngày âm lịch */
+  function layNgayAm(duong, d, m, y) {
+    if (!duong) return { ngay: d, thang: m, nam: y, nhuan: 0, jd: window.AmLich.jdFromDate(d, m, y), tuNhap: true };
+    var r = window.AmLich.duongSangAm(d, m, y);
+    r.tuNhap = false;
+    return r;
+  }
+
+  function dung() {
+    var wrap = document.querySelector('#app .wrap') || document.querySelector('.wrap');
+    if (!wrap || !window.TrungTang || !window.QuanSat || !window.AmLich) return;
+
+    /* ================= MỤC 4: TRÙNG TANG ================= */
+    var tGt = nhomRadio('tt-gt', 'tt-gt-nam', 'tt-gt-nu', 'Nam', 'Nữ');
+    var tLich = nhomRadio('tt-lich', 'tt-lich-duong', 'tt-lich-am', 'Dương lịch', 'Âm lịch');
+    var tNamSinh = oSo('tt-ns', 'Năm sinh', 1850, 2100, 'VD: 1945');
+    var tNgay = oSo('tt-ngay', 'Ngày mất', 1, 31, 'Ngày');
+    var tThang = oSo('tt-thang', 'Tháng mất', 1, 12, 'Tháng');
+    var tNam = oSo('tt-nam', 'Năm mất', 1900, 2100, 'Năm');
+    var tGio = selectGio('tt-gio', 'Giờ mất');
+    var tBtn = el('button', { className: 'btn', type: 'button', id: 'tt-btn', text: 'Tính trùng tang' });
+    var tKq = el('div', { id: 'tt-kq' });
+
+    var secTT = el('section', { id: 'trung-tang', className: 'card tab-panel' }, [
+      el('h2', { className: 'card-title', text: 'Tính trùng tang cho người mới mất' }),
+      el('p', { className: 'muted', text: 'Nhập tuổi và thời điểm mất. Phần mềm bấm 12 cung địa chi để xem được Nhập mộ, Thiên di hay phạm Trùng tang, và hiện cả cách bấm tay để nhà chùa đối chiếu.' }),
+      el('div', { className: 'lookup' }, [
+        el('div', { className: 'lookup-row' }, [
+          truong('Giới tính người mất', tGt.el),
+          truong('Năm sinh (dương lịch)', tNamSinh)
+        ]),
+        el('div', { className: 'lookup-row' }, [ truong('Ngày mất nhập theo', tLich.el) ]),
+        el('div', { className: 'lookup-row' }, [
+          truong('Ngày mất', tNgay), truong('Tháng mất', tThang), truong('Năm mất', tNam),
+          truong('Giờ mất', tGio)
+        ]),
+        tBtn
+      ]),
+      tKq
+    ]);
+
+    function tinhTT() {
+      clear(tKq);
+      var ns = parseInt(tNamSinh.value, 10), d = parseInt(tNgay.value, 10),
+          m = parseInt(tThang.value, 10), y = parseInt(tNam.value, 10),
+          gi = parseInt(tGio.value, 10), laNam = tGt.r1.checked, duong = tLich.r1.checked;
+      if (!ns || !d || !m || !y) { tKq.appendChild(el('p', { className: 'err', text: 'Xin nhập đủ năm sinh và ngày tháng năm mất.' })); return; }
+      if (m < 1 || m > 12 || d < 1 || d > 31) { tKq.appendChild(el('p', { className: 'err', text: 'Ngày hoặc tháng không hợp lệ.' })); return; }
+      if (y < ns) { tKq.appendChild(el('p', { className: 'err', text: 'Năm mất phải sau năm sinh.' })); return; }
+
+      var am = layNgayAm(duong, d, m, y);
+      var tuoi = y - ns + 1;
+      var r = window.TrungTang.tinh(laNam, tuoi, am.thang, am.ngay, gi);
+
+      tKq.appendChild(el('div', { className: 'kq-head',
+        text: (laNam ? 'Ông/nam' : 'Bà/nữ') + ' sinh năm ' + ns + ', mất ngày ' + d + '/' + m + '/' + y +
+              (duong ? ' dương lịch' : ' âm lịch') + ', giờ ' + CHI[gi] + ' (' + KHUNG_GIO[gi] + ')' }));
+      tKq.appendChild(el('div', { className: 'muted',
+        text: (duong ? 'Quy ra âm lịch: ngày ' + am.ngay + ' tháng ' + am.thang + (am.nhuan ? ' nhuận' : '') + ' năm ' + window.AmLich.canChiNam(am.nam).ten + '. ' : '') +
+              'Tuổi mụ: ' + tuoi + ' tuổi.' }));
+      tKq.appendChild(el('div', { className: 'kq-tuoi', text: tuoi + ' tuổi (tuổi mụ)' }));
+
+      if (r.khongTinh) {
+        tKq.appendChild(el('div', { className: 'kq-item good' },
+          [el('span', { className: 'kq-val', text: r.ketLuan })]));
+        return;
+      }
+      var ds = el('div', { className: 'kq-list' });
+      r.mucs.forEach(function (mc) {
+        var xau = (mc.loai === 'Trùng tang');
+        ds.appendChild(el('div', { className: 'kq-item ' + (xau ? 'bad' : 'good') }, [
+          el('div', { className: 'kq-labelbox' }, [el('span', { className: 'kq-label', text: 'Cung ' + mc.ten })]),
+          el('span', { className: 'kq-val', text: mc.chi + ' — ' + mc.loai })
+        ]));
+      });
+      tKq.appendChild(ds);
+
+      var yen = (r.mucDo === 'yen');
+      var hop = el('div', { className: 'kq-item ' + (yen ? 'good' : 'bad') });
+      var lb = el('div', { className: 'kq-labelbox' }, [el('span', { className: 'kq-label', text: 'Kết luận' })]);
+      var bam = khoiBam('Cách bấm tay để đối chiếu', r.cachBam);
+      if (bam) lb.appendChild(bam.nut);
+      hop.appendChild(lb);
+      hop.appendChild(el('span', { className: 'kq-val', text: yen ? 'YÊN LÀNH' : 'CÓ TRÙNG TANG' }));
+      hop.appendChild(el('span', { className: 'kq-desc', text: r.ketLuan }));
+      if (bam) hop.appendChild(bam.box);
+      tKq.appendChild(hop);
+
+      tKq.appendChild(el('p', { className: 'kq-sum',
+        text: 'Tổng: ' + r.soNhapMo + ' Nhập mộ, ' + r.soThienDi + ' Thiên di, ' + r.soTrungTang + ' Trùng tang.' }));
+      tKq.appendChild(el('p', { className: 'kq-note muted',
+        text: 'Đây là tín ngưỡng dân gian, dùng để tham khảo. Cách bấm cho người nữ ở bước tháng, ngày, giờ chỉ có một nguồn nêu ví dụ đầy đủ, nên khi gặp việc hệ trọng xin hỏi thêm sư thầy trong chùa.' }));
+    }
+    tBtn.addEventListener('click', tinhTT);
+    [tNamSinh, tNgay, tThang, tNam].forEach(function (o) {
+      o.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); tinhTT(); } });
+    });
+
+    /* ================= MỤC 5: QUAN SÁT TRẺ EM ================= */
+    var qGt = nhomRadio('qs-gt', 'qs-gt-trai', 'qs-gt-gai', 'Bé trai', 'Bé gái');
+    var qLich = nhomRadio('qs-lich', 'qs-lich-duong', 'qs-lich-am', 'Dương lịch', 'Âm lịch');
+    var qNgay = oSo('qs-ngay', 'Ngày sinh', 1, 31, 'Ngày');
+    var qThang = oSo('qs-thang', 'Tháng sinh', 1, 12, 'Tháng');
+    var qNam = oSo('qs-nam', 'Năm sinh', 1950, 2100, 'Năm');
+    var qGio = selectGio('qs-gio', 'Giờ sinh');
+    var qBtn = el('button', { className: 'btn', type: 'button', id: 'qs-btn', text: 'Tra quan sát' });
+    var qKq = el('div', { id: 'qs-kq' });
+
+    var secQS = el('section', { id: 'quan-sat', className: 'card tab-panel' }, [
+      el('h2', { className: 'card-title', text: 'Quan sát trẻ nhỏ' }),
+      el('p', { className: 'muted', text: 'Tra các quan trẻ nhỏ hay phạm: Kim Xà Thiết Tỏa, Quan Sát, Diêm Vương, Dạ Đề, Tướng Quân. Nhập ngày giờ sinh của cháu.' }),
+      el('div', { className: 'lookup' }, [
+        el('div', { className: 'lookup-row' }, [
+          truong('Giới tính', qGt.el), truong('Ngày sinh nhập theo', qLich.el)
+        ]),
+        el('div', { className: 'lookup-row' }, [
+          truong('Ngày sinh', qNgay), truong('Tháng sinh', qThang),
+          truong('Năm sinh', qNam), truong('Giờ sinh', qGio)
+        ]),
+        qBtn
+      ]),
+      qKq
+    ]);
+
+    function tinhQS() {
+      clear(qKq);
+      var d = parseInt(qNgay.value, 10), m = parseInt(qThang.value, 10),
+          y = parseInt(qNam.value, 10), gi = parseInt(qGio.value, 10),
+          laNam = qGt.r1.checked, duong = qLich.r1.checked;
+      if (!d || !m || !y) { qKq.appendChild(el('p', { className: 'err', text: 'Xin nhập đủ ngày, tháng, năm sinh.' })); return; }
+      if (m < 1 || m > 12 || d < 1 || d > 31) { qKq.appendChild(el('p', { className: 'err', text: 'Ngày hoặc tháng không hợp lệ.' })); return; }
+
+      var am = layNgayAm(duong, d, m, y);
+      var chiNam = window.AmLich.canChiNam(am.nam).chi;
+      var gioChi = CHI[gi];
+      var r = window.QuanSat.tra(chiNam, am.thang, am.ngay, gioChi, laNam);
+
+      qKq.appendChild(el('div', { className: 'kq-head',
+        text: (laNam ? 'Bé trai' : 'Bé gái') + ' sinh ' + d + '/' + m + '/' + y +
+              (duong ? ' dương lịch' : ' âm lịch') + ', giờ ' + gioChi + ' (' + KHUNG_GIO[gi] + ')' }));
+      qKq.appendChild(el('div', { className: 'muted',
+        text: (duong ? 'Quy ra âm lịch: ngày ' + am.ngay + ' tháng ' + am.thang + (am.nhuan ? ' nhuận' : '') + ' năm ' + window.AmLich.canChiNam(am.nam).ten + '. ' : 'Năm ' + window.AmLich.canChiNam(am.nam).ten + '. ') +
+              'Tháng ' + am.thang + ' thuộc mùa ' + r.mua + '.' }));
+
+      var ds = el('div', { className: 'kq-list' });
+      r.danhSach.forEach(function (q) {
+        var it = el('div', { className: 'kq-item ' + (q.pham ? 'bad' : 'good') });
+        var lb = el('div', { className: 'kq-labelbox' }, [el('span', { className: 'kq-label', text: q.ten })]);
+        var box = el('div', { className: 'info-box' }, [
+          el('div', { className: 'info-title', text: q.ten }),
+          el('p', { text: q.yNghia })
+        ]);
+        if (q.cachBam && q.cachBam.length) {
+          var ol = el('ol', { className: 'bam-list' });
+          q.cachBam.forEach(function (b) { ol.appendChild(el('li', { text: b })); });
+          box.appendChild(el('div', { className: 'info-title', text: 'Cách bấm tay' }));
+          box.appendChild(ol);
+        }
+        var nut = el('button', { className: 'info-btn', type: 'button', text: '!', title: 'Giải thích ' + q.ten });
+        nut.addEventListener('click', function () {
+          var mo = box.className.indexOf('open') >= 0;
+          box.className = mo ? 'info-box' : 'info-box open';
+          nut.className = mo ? 'info-btn' : 'info-btn on';
+        });
+        lb.appendChild(nut);
+        it.appendChild(lb);
+        it.appendChild(el('span', { className: 'kq-val', text: q.ketQua }));
+        it.appendChild(el('span', { className: 'kq-desc', text: q.chiTiet }));
+        it.appendChild(box);
+        ds.appendChild(it);
+      });
+      qKq.appendChild(ds);
+      qKq.appendChild(el('p', { className: 'kq-sum',
+        text: r.soPham === 0 ? 'Cháu không phạm quan nào trong năm quan trên.'
+                             : 'Cháu phạm: ' + r.tenPham.join(', ') + '.' }));
+      qKq.appendChild(el('p', { className: 'kq-note muted',
+        text: 'Đây là tín ngưỡng dân gian, mang tính tham khảo, không phải chẩn đoán sức khoẻ. Cách giải thường dùng là bán khoán cháu vào chùa. Không nên hơ lửa hay xông khói lên trẻ nhỏ vì dễ gây bỏng và ngạt. Cháu có biểu hiện sốt cao, co giật, bỏ bú, khó thở thì phải đưa đi khám ngay.' }));
+    }
+    qBtn.addEventListener('click', tinhQS);
+    [qNgay, qThang, qNam].forEach(function (o) {
+      o.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); tinhQS(); } });
+    });
+
+    wrap.appendChild(secTT);
+    wrap.appendChild(secQS);
+
+    /* ====== Dựng lại thanh tab cho đủ 5 mục ====== */
+    var MUC = [
+      { id: 'tra-cuu',    nhan: '1. Tra cứu tuổi' },
+      { id: 'bang',       nhan: '2. Bảng tra cứu theo từng năm' },
+      { id: 'trung-tang', nhan: '3. Trùng tang' },
+      { id: 'quan-sat',   nhan: '4. Quan sát trẻ nhỏ' },
+      { id: 'quy-tac',    nhan: '5. Giải thích quy tắc' }
+    ];
+    var cu = wrap.querySelector('.main-tabs');
+    if (cu) cu.parentNode.removeChild(cu);
+    var thanh = el('div', { className: 'main-tabs', role: 'tablist' });
+    var nuts = [];
+    MUC.forEach(function (mc, i) {
+      var b = el('button', { className: 'tab-btn', type: 'button', role: 'tab', text: mc.nhan });
+      b.addEventListener('click', function () { chon(i); });
+      nuts.push(b); thanh.appendChild(b);
+    });
+    function chon(k) {
+      MUC.forEach(function (mc, i) {
+        var sec = document.getElementById(mc.id);
+        if (sec) sec.className = 'card tab-panel' + (i === k ? ' active' : '');
+        nuts[i].className = 'tab-btn' + (i === k ? ' active' : '');
+      });
+    }
+    wrap.insertBefore(thanh, wrap.firstChild);
+    /* giữ đúng thứ tự: quy tắc xuống cuối */
+    var qt = document.getElementById('quy-tac');
+    if (qt) wrap.appendChild(qt);
+    chon(0);
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', dung);
+  else dung();
 })();
 </script>
 </body>
