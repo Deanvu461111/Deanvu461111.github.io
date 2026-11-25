@@ -1107,6 +1107,16 @@ table.tbl {
   margin-bottom: 6px;
   line-height: 1.6;
 }
+
+/* ========== 13. MỨC CẢNH BÁO NHẸ (bàng giờ, dị bản lệch nhau) ========== */
+.kq-item.warn {
+  background: var(--gold-soft);
+  border-left: 4px solid var(--gold);
+}
+
+.kq-item.warn .kq-val {
+  color: #8a6508;
+}
 </style>
 </head>
 <body>
@@ -2296,7 +2306,8 @@ table.tbl {
 
       var ds = el('div', { className: 'kq-list' });
       r.danhSach.forEach(function (q) {
-        var it = el('div', { className: 'kq-item ' + (q.pham ? 'bad' : 'good') });
+        var mau = q.pham ? 'bad' : (q.canLuuY ? 'warn' : 'good');
+        var it = el('div', { className: 'kq-item ' + mau });
         var lb = el('div', { className: 'kq-labelbox' }, [el('span', { className: 'kq-label', text: q.ten })]);
         var box = el('div', { className: 'info-box' }, [
           el('div', { className: 'info-title', text: q.ten }),
